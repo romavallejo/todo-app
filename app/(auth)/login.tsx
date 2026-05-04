@@ -2,6 +2,7 @@ import { Colors } from "@/constants/theme";
 import { AuthContext } from "@/contexts/AuthContext";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { loginFirebase } from "@/services/auth/authServices";
+import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import {
     ActivityIndicator,
@@ -18,6 +19,8 @@ export default function LoginScreen() {
     const textColor = Colors[colorScheme ?? 'light'].text;
     const tint = Colors[colorScheme ?? 'light'].tint;
     const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
+
+    const router = useRouter();
 
     const { login } = useContext(AuthContext);
     const [email, setEmail] = useState("");
@@ -130,6 +133,21 @@ export default function LoginScreen() {
                         ) : (
                             <Text className="font-semibold text-base" style={{color: tint}}>
                                 Sign In
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+
+                    {/* Register */}
+                    <TouchableOpacity
+                        className={`rounded-xl py-4 mt-2 items-center `}
+                        onPress={() => router.replace("/(auth)/register")}
+                        activeOpacity={0.8}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text className="font-semibold text-base" style={{color: tint}}>
+                                Register
                             </Text>
                         )}
                     </TouchableOpacity>
