@@ -1,6 +1,8 @@
-import { login } from "@/services/auth/authServices";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useState } from "react";
+import { Colors } from "@/constants/theme";
+import { AuthContext } from "@/contexts/AuthContext";
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { loginFirebase } from "@/services/auth/authServices";
+import { useContext, useState } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -12,13 +14,33 @@ import {
 } from "react-native";
 
 export default function LoginScreen() {
+    const colorScheme = useColorScheme();
+    const textColor = Colors[colorScheme ?? 'light'].text;
+    const tint = Colors[colorScheme ?? 'light'].tint;
+    const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
+
+    const { login } = useContext(AuthContext);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const [todoLoading, setTodoLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const handleLogin = async () => {
+        if (!email || !password) {
+            setError("Please fill in all fields.");
+            return;
+        }
+
+        if (!EMAIL_REGEX.test(email)) {
+            setError("Please enter a valid email.");
+            return;
+        }
+
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters.");
+            return;
+        }
         if (!email || !password) {
             setError("Please fill in all fields.");
             return;
@@ -28,9 +50,8 @@ export default function LoginScreen() {
         setLoading(true);
 
         try {
-            const token = await login(email, password);
-            console.log("Token:", token);
-            await AsyncStorage.setItem("token", token);
+            const token = await loginFirebase(email, password);
+            await login(null, token);
         } catch (err: any) {
             setError(err.message ?? "Login failed. Please try again.");
         } finally {
@@ -38,19 +59,20 @@ export default function LoginScreen() {
         }
     };
 
-
     return (
         <KeyboardAvoidingView
-            className="flex-1 bg-zinc-950"
+            className="flex-1"
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
             <View className="flex-1 justify-center px-6">
                 {/* Header */}
                 <View className="mb-10">
-                    <Text className="text-white text-4xl font-bold tracking-tight">
+                    <Text 
+                        style={{color: textColor}}
+                        className="text-4xl font-bold tracking-tight">
                         Welcome back
                     </Text>
-                    <Text className="text-red-800 text-base mt-2">
+                    <Text className="text-base mt-2" style={{color: textColor}}>
                         Sign in to your account
                     </Text>
                 </View>
@@ -58,11 +80,12 @@ export default function LoginScreen() {
                 {/* Form */}
                 <View className="gap-4">
                     <View>
-                        <Text className="text-zinc-400 text-sm font-medium mb-1.5">
+                        <Text className="text-sm font-medium mb-1.5" style={{color: textColor}}>
                             Email
                         </Text>
                         <TextInput
-                            className="bg-zinc-900 text-white rounded-xl px-4 py-3.5 text-base border border-zinc-800 focus:border-indigo-500"
+                            style={{color: textColor, borderColor: tintAlt}}
+                            className="rounded-xl px-4 py-3.5 text-base border"
                             placeholder="you@example.com"
                             placeholderTextColor="#52525b"
                             value={email}
@@ -74,11 +97,12 @@ export default function LoginScreen() {
                     </View>
 
                     <View>
-                        <Text className="text-zinc-400 text-sm font-medium mb-1.5">
+                        <Text className="text-sm font-medium mb-1.5" style={{color: textColor}}>
                             Password
                         </Text>
                         <TextInput
-                            className="bg-zinc-900 text-white rounded-xl px-4 py-3.5 text-base border border-zinc-800 focus:border-indigo-500"
+                            style={{color: textColor, borderColor: tintAlt}}
+                            className="rounded-xl px-4 py-3.5 text-base border"
                             placeholder="••••••••"
                             placeholderTextColor="#52525b"
                             value={password}
@@ -95,9 +119,8 @@ export default function LoginScreen() {
 
                     {/* Sign In */}
                     <TouchableOpacity
-                        className={`rounded-xl py-4 mt-2 items-center ${
-                            loading ? "bg-indigo-800" : "bg-indigo-600"
-                        }`}
+                        style={{backgroundColor: tintAlt}}
+                        className={`rounded-xl py-4 mt-2 items-center `}
                         onPress={handleLogin}
                         disabled={loading}
                         activeOpacity={0.8}
@@ -105,7 +128,7 @@ export default function LoginScreen() {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text className="text-white font-semibold text-base">
+                            <Text className="font-semibold text-base" style={{color: tint}}>
                                 Sign In
                             </Text>
                         )}
