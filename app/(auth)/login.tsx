@@ -1,4 +1,3 @@
-import api from "@/services/api";
 import { login } from "@/services/auth/authServices";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
@@ -39,17 +38,6 @@ export default function LoginScreen() {
         }
     };
 
-    const handleFetchTodos = async () => {
-        setTodoLoading(true);
-        try {
-            const response = await api.get("/todo");
-            console.log("Todos:", response.data);
-        } catch (err: any) {
-            console.error("Failed to fetch todos:", err.message ?? err);
-        } finally {
-            setTodoLoading(false);
-        }
-    };
 
     return (
         <KeyboardAvoidingView
@@ -123,25 +111,6 @@ export default function LoginScreen() {
                         )}
                     </TouchableOpacity>
 
-                    {/* Fetch Todos */}
-                    <TouchableOpacity
-                        className={`rounded-xl py-4 items-center border ${
-                            todoLoading
-                                ? "border-zinc-700 bg-zinc-900"
-                                : "border-zinc-700"
-                        }`}
-                        onPress={handleFetchTodos}
-                        disabled={todoLoading}
-                        activeOpacity={0.8}
-                    >
-                        {todoLoading ? (
-                            <ActivityIndicator color="#a1a1aa" />
-                        ) : (
-                            <Text className="text-zinc-300 font-semibold text-base">
-                                Fetch Todos
-                            </Text>
-                        )}
-                    </TouchableOpacity>
                 </View>
             </View>
         </KeyboardAvoidingView>

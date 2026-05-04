@@ -1,9 +1,9 @@
 import { View } from "react-native";
 
-export default function Index() {
+export default function Search() {
   return (
     <View>
-      Dashboard
+      Search Window
     </View>
   );
 }
