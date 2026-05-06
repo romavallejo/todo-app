@@ -1,5 +1,5 @@
 import api from "../api";
 
 export const getCategoriesByListId = async (id: string) => {
-    await api.get(`/category/list?id=${id}`);
+    return (await api.get(`/category/list?id=${id}`)).data;
 };

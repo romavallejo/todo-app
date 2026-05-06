@@ -8,7 +8,7 @@ export const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 	const [token, setToken] = useState(null);
-	const [isAuthenticated, setIsAuthenticated] = useState(true);
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     const checkForAuth = async () => {
 		const t = await AsyncStorage.getItem("token");

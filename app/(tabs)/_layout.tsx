@@ -47,7 +47,48 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
         }}
       />
-      
+      <Tabs.Screen 
+        name="todo/create"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="todo/[id]/edit"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="todo/[id]/view"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="list/create"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="list/[id]/edit"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="list/[id]/view"
+        options={{
+           href: null
+        }}
+      />
+      <Tabs.Screen 
+        name="list/[id]/public"
+        options={{
+           href: null
+        }}
+      />
     </Tabs>
   );
 }

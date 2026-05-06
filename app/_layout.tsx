@@ -1,5 +1,6 @@
 // app/_layout.tsx
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DataProvider } from "@/contexts/DataContext";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
@@ -10,19 +11,21 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
+      <DataProvider>
+        <ThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
 
-        <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ headerShown: false }}>
 
-          <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(tabs)" />
 
-          <Stack.Protected guard={__DEV__}>
-            <Stack.Screen name="storybook" />
-          </Stack.Protected>
+            <Stack.Protected guard={__DEV__}>
+              <Stack.Screen name="storybook" />
+            </Stack.Protected>
 
-        </Stack>
-        
-      </ThemeProvider>
+          </Stack>
+          
+        </ThemeProvider>
+      </DataProvider>
     </AuthProvider>
   );
 }

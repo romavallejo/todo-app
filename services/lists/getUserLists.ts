@@ -1,5 +1,5 @@
 import api from "../api";
 
 export const getUserLists = async () => {
-    await api.get('/list');
+    return (await api.get('/list')).data;
 };

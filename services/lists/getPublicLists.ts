@@ -1,5 +1,5 @@
 import api from "../api";
 
 export const getPublicLists = async () => {
-    await api.get('/list/public');
+    return (await api.get('/list/public')).data;
 };

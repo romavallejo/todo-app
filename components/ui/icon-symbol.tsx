@@ -22,6 +22,10 @@ const MAPPING = {
   "info.circle.fill": "info",
   'square.grid.2x2.fill': 'dashboard',
   'person.circle': 'account-circle',
+
+  'square': 'check-box-outline-blank',
+  'checkmark.square.fill': 'check-box',
+  'pencil': 'edit',
 } as IconMapping;
 
 /**
