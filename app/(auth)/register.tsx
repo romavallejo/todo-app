@@ -2,6 +2,8 @@ import { Colors } from "@/constants/theme";
 import { AuthContext } from "@/contexts/AuthContext";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { loginFirebase } from "@/services/auth/authServices";
+import { registerUser } from "@/services/user/registerUser";
+import { RegisterUser } from "@/types/RegisterUser";
 import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import {
@@ -11,10 +13,10 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-} from "react-native";
+    View
+} from 'react-native';
 
-const RegisterUser = () => {
+const RegisterUserPage = () => {
     const colorScheme = useColorScheme();
         const textColor = Colors[colorScheme ?? 'light'].text;
         const tint = Colors[colorScheme ?? 'light'].tint;
@@ -32,8 +34,8 @@ const RegisterUser = () => {
         const [error, setError] = useState<string | null>(null);
     
         const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const handleLogin = async () => {
-            if (!email || !password) {
+        const handleRegister = async () => {
+            if (!name || !email || !password || !passwordConf) {
                 setError("Please fill in all fields.");
                 return;
             }
@@ -47,22 +49,38 @@ const RegisterUser = () => {
                 setError("Password must be at least 6 characters.");
                 return;
             }
-            if (!email || !password) {
-                setError("Please fill in all fields.");
+            if (password != passwordConf)
+                {
+                setError("Password are not equal.");
                 return;
             }
+            
     
             setError(null);
             setLoading(true);
+
+            let user: RegisterUser = {
+                email: email,
+                password: password,
+                passwordConfirmation: passwordConf,
+                fullName: name
+            };
     
             try {
-                const token = await loginFirebase(email, password);
+                await registerUser(user);
+            } catch (err: any) {
+                setError(err.message ?? "Registration Failed. Please try again.");
+            }
+
+            try {
+                const token = await loginFirebase(user.email, user.password);
                 await login(null, token);
             } catch (err: any) {
-                setError(err.message ?? "Login failed. Please try again.");
+                setError(err.message ?? "Account created successfully. Login failed. Try again later.");
             } finally {
                 setLoading(false);
             }
+            
         };
     
         return (
@@ -70,6 +88,14 @@ const RegisterUser = () => {
                 className="flex-1"
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
+                <TouchableOpacity
+                    onPress={() => router.navigate("/(auth)/login")}
+                    className="px-4 pt-6 pb-2"
+                    activeOpacity={0.7}
+                >
+                    <Text style={{ color: tint }} className="text-2xl">←</Text>
+                </TouchableOpacity>
+                
                 <View className="flex-1 justify-center px-6">
                     {/* Header */}
                     <View className="mb-10">
@@ -158,7 +184,7 @@ const RegisterUser = () => {
                         <TouchableOpacity
                             style={{backgroundColor: tintAlt}}
                             className={`rounded-xl py-4 mt-2 items-center `}
-                            onPress={()=>{}}
+                            onPress={handleRegister}
                             disabled={loading}
                             activeOpacity={0.8}
                         >
@@ -177,4 +203,4 @@ const RegisterUser = () => {
         );
 };
 
-export default RegisterUser;
+export default RegisterUserPage;

@@ -1,20 +1,30 @@
-import { Redirect, Tabs } from 'expo-router';
-import React, { useContext } from 'react';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { AuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Tabs, useRouter } from 'expo-router';
+import React, { useContext, useEffect } from 'react';
 
 export default function TabLayout() {
-  const {isAuthenticated} = useContext(AuthContext);
+  const {isAuthenticated, checkForAuth } = useContext(AuthContext);
 
-  if (!isAuthenticated) {
-    return <Redirect href="/login"/>
-  }
+  const router = useRouter();
 
   const colorScheme = useColorScheme();
+
+  useEffect(()=>{
+
+    const authCheck = async () => {
+      if (!isAuthenticated) {
+        const success = await checkForAuth();
+        if (!success) router.replace("/(auth)/login");
+      };
+    };
+
+    authCheck();
+    
+  },[]);
 
   return (
     <Tabs
@@ -37,13 +47,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
         }}
       />
-      <Tabs.Screen 
-        name="user"
-        options={{
-          title: 'User',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.circle" color={color} />,
-        }}
-      />
+      
     </Tabs>
   );
 }
+
+/*
+<Tabs.Screen 
+  name="user"
+  options={{
+    title: 'User',
+    tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.circle" color={color} />,
+  }}
+/>
+*/

@@ -44,10 +44,6 @@ export default function LoginScreen() {
             setError("Password must be at least 6 characters.");
             return;
         }
-        if (!email || !password) {
-            setError("Please fill in all fields.");
-            return;
-        }
 
         setError(null);
         setLoading(true);
