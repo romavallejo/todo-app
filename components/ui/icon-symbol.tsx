@@ -26,6 +26,8 @@ const MAPPING = {
   'square': 'check-box-outline-blank',
   'checkmark.square.fill': 'check-box',
   'pencil': 'edit',
+
+  'chevron.left': 'chevron-left'
 } as IconMapping;
 
 /**

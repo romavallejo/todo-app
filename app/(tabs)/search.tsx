@@ -49,7 +49,7 @@ export default function Search() {
   }, [userLists, search]);
 
   return (
-    <ScrollView className="flex flex-col px-6">
+    <ScrollView className="flex-col px-6">
 
       {/* Search bar */}
       <View
