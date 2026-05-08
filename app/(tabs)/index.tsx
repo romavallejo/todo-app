@@ -4,10 +4,13 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getUserLists } from "@/services/lists/getUserLists";
 import { getUserTodos } from "@/services/todos/getUserTodos";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   Text,
+  TouchableOpacity,
   View
 } from "react-native";
 
@@ -23,40 +26,63 @@ export default function Index() {
   const [userLists, setUserLists] = useState(null);
   const [userListsError, setUserListsError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const router = useRouter();
 
-    const load = async () => {
-      setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setUserTodosError(null);
+    setUserListsError(null);
 
-      const [todosResult, listsResult] = await Promise.allSettled([
-        getUserTodos(true),
-        getUserLists(),
-      ]);
+    const [todosResult, listsResult] = await Promise.allSettled([
+      getUserTodos(true),
+      getUserLists(),
+    ]);
 
-      if (cancelled) return;
+    if (todosResult.status === "fulfilled") {
+      setUserTodos(todosResult.value);
+    } else {
+      setUserTodosError("Error while retrieving todos.");
+    }
 
-      if (todosResult.status === "fulfilled") {
-        setUserTodos(todosResult.value);
-      } else {
-        setUserTodosError("Error while retrieving todos.");
-      }
+    if (listsResult.status === "fulfilled") {
+      setUserLists(listsResult.value);
+    } else {
+      setUserListsError("Error while retrieving lists.");
+    }
 
-      if (listsResult.status === "fulfilled") {
-        setUserLists(listsResult.value);
-      } else {
-        setUserListsError("Error while retrieving lists.");
-      }
-
-      setLoading(false);
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
+    setLoading(false);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const run = async () => {
+        await load();
+        if (cancelled) return;
+      };
+
+      run();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [load])
+  );
+
+  // Only show pending todos that are overdue or due today
+  const visibleTodos = useMemo(() => {
+    if (!userTodos) return null;
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    return userTodos.filter((t) => {
+      if (t.completed) return false;
+      if (!t.dueDate) return false;
+      return new Date(t.dueDate).getTime() <= endOfToday.getTime();
+    });
+  }, [userTodos]);
 
   return (
     <ScrollView className="flex flex-col px-6">
@@ -76,7 +102,7 @@ export default function Index() {
       </View>
 
       {/* Todos due today */}
-      <View className="mt-6">
+      <View className="mt-6 flex-col gap-2">
         <Text
           style={{ color: textColor }}
           className="tracking-widest uppercase mb-2"
@@ -88,8 +114,8 @@ export default function Index() {
           <Text style={{ color: textColor }}>Loading...</Text>
         ) : userTodosError ? (
           <Text style={{ color: textColor }}>{userTodosError}</Text>
-        ) : userTodos && userTodos.length > 0 ? (
-          userTodos.map((t) => (
+        ) : visibleTodos && visibleTodos.length > 0 ? (
+          visibleTodos.map((t) => (
             <Todo key={t.uuid} todo={t}/>
           ))
         ) : (
@@ -98,7 +124,7 @@ export default function Index() {
       </View>
 
       {/* Lists of todos */}
-      <View className="mt-6">
+      <View className="mt-6 flex-col gap-2 mb-10">
         <Text style={{ color: textColor }} className="mb-2 tracking-widest uppercase">
           Lists
         </Text>
@@ -114,6 +140,40 @@ export default function Index() {
         ) : (
           <Text style={{ color: textColor }}>No lists yet.</Text>
         )}
+
+        <TouchableOpacity
+            style={{backgroundColor: tintAlt}}
+            className={`rounded-xl py-4 mt-2 items-center `}
+            onPress={() => {router.navigate("/(tabs)/list/create")}}
+            disabled={loading}
+            activeOpacity={0.8}
+        >
+            {loading ? (
+                <ActivityIndicator color="#fff" />
+            ) : (
+                <Text className="font-semibold text-base" style={{color: tint}}>
+                    Create new List
+                </Text>
+            )}
+        </TouchableOpacity>
+
+        {/* Floating button */}
+        <TouchableOpacity
+          onPress={() => router.navigate("/(tabs)/todo/create")}
+          activeOpacity={0.8}
+          style={{
+            backgroundColor: tintAlt,
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+          }}
+          className="w-16 h-16 rounded-full items-center justify-center shadow-lg"
+        >
+          <Text style={{ color: tint }} className="text-3xl font-bold">
+            +
+          </Text>
+        </TouchableOpacity>
+
       </View>
     </ScrollView>
   );

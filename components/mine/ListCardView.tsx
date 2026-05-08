@@ -1,6 +1,8 @@
 import { Colors } from "@/constants/theme";
+import { DataContext } from "@/contexts/DataContext";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from "expo-router";
+import { useContext } from "react";
 import { Pressable, Text, View } from "react-native";
 
 type ListType = {
@@ -23,13 +25,15 @@ const ListCardView = ({ list }: ListProps) => {
     const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
 
     const router = useRouter();
-
-    const goToEdit = () => {
-       router.replace(`/(tabs)/list/${list.uuid}/public`);
-    };
+    const {setGlobalList} = useContext(DataContext);
 
     return (
-        <Pressable onPress={goToEdit} hitSlop={8}>
+        <Pressable onPress={() => {
+                setGlobalList(list);
+                router.navigate(`/list/${list.uuid}/public`);
+            }} 
+            hitSlop={8}
+        >
             <View
                 className="w-full p-3 rounded-lg border-2"
                 style={{ backgroundColor: bg , borderColor: tintAlt}}
@@ -40,7 +44,6 @@ const ListCardView = ({ list }: ListProps) => {
                         style={{
                             color: textColor,
                         }}
-                        numberOfLines={1}
                     >
                         {list.title}
                     </Text>
@@ -57,8 +60,7 @@ const ListCardView = ({ list }: ListProps) => {
 
                 <Text
                     style={{
-                        color: textColor,
-                        opacity: 1,
+                        color: textColor
                     }}
                 >
                     {list.description}

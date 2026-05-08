@@ -5,7 +5,7 @@ export type UpdateTodoDto = {
     completed: boolean,
     completedAt: Date | null,
     dueDate: Date | null,
-    listUuid: string,
+    listUuid: string | null,
     priority: string,
     ownerId: string,
 };

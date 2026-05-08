@@ -3,34 +3,17 @@ import { Colors } from "@/constants/theme";
 import { DataContext } from '@/contexts/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { updateTodo } from '@/services/todos/updateTodo';
+import { TodoType } from '@/types/TodoType';
 import { UpdateTodoDto } from "@/types/UpdateTodoDto";
 import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Category from "./Category";
-
-type CategoryType = {
-    id: string;
-    name: string;
-    color: string;
-};
-
-type TodoType = {
-    uuid: string;
-    title: string;
-    description: string;
-    completed: boolean;
-    createdAt: string;
-    completedAt: string | null;
-    dueDate: string;
-    listUuid: string;
-    priority: "LOW" | "MEDIUM" | "HIGH";
-    ownerId: string;
-    categories: CategoryType[];
-};
+import PriorityTag from './PriorityTag';
 
 type TodoProps = {
     todo: TodoType;
+    onCompletedChange?: (uuid: string, completed: boolean) => void;
 };
 
 const formatDueDate = (iso: string) => {
@@ -42,7 +25,7 @@ const formatDueDate = (iso: string) => {
     });
 };
 
-const Todo = ({ todo }: TodoProps) => {
+const Todo = ({ todo, onCompletedChange }: TodoProps) => {
     const { setGlobalTodo } = useContext(DataContext);
 
     const colorScheme = useColorScheme();
@@ -59,6 +42,7 @@ const Todo = ({ todo }: TodoProps) => {
         if (updating) return;
         const next = !completed;
         setCompleted(next); // optimistic
+        onCompletedChange?.(todo.uuid, next); // notify parent optimistically
 
         const dto: UpdateTodoDto = {
             uuid: todo.uuid,
@@ -77,6 +61,7 @@ const Todo = ({ todo }: TodoProps) => {
             await updateTodo(dto);
         } catch (err) {
             setCompleted(!next); // rollback
+            onCompletedChange?.(todo.uuid, !next); // rollback parent too
             console.error("Failed to update todo", err);
         } finally {
             setUpdating(false);
@@ -114,17 +99,20 @@ const Todo = ({ todo }: TodoProps) => {
 
                 {/* Info */}
                 <View className="flex-1">
-                    <Text
-                        className="text-lg font-bold"
-                        style={{
-                            color: textColor,
-                            textDecorationLine: completed ? "line-through" : "none",
-                            opacity: completed ? 0.6 : 1,
-                        }}
-                        numberOfLines={1}
-                    >
-                        {todo.title}
-                    </Text>
+                    <View className='flex-row items-center'>
+                        <Text
+                            className="text-lg font-bold flex-1"
+                            style={{
+                                color: textColor,
+                                textDecorationLine: completed ? "line-through" : "none",
+                                opacity: completed ? 0.6 : 1,
+                            }}
+                            numberOfLines={1}
+                        >
+                            {todo.title}
+                        </Text>
+                        <PriorityTag priority={todo.priority}/>
+                    </View>
 
                     <View className="flex-row items-center flex-wrap gap-1 mt-1">
                         {todo.categories?.map((c) => (

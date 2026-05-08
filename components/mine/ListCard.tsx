@@ -31,12 +31,12 @@ const ListCard = ({ list }: ListProps) => {
 
     const goToEdit = () => {
         setGlobalList(list)
-        router.replace(`/(tabs)/list/${list.uuid}/edit`);
+        router.navigate(`/(tabs)/list/${list.uuid}/edit`);
     };
 
     const goToView = () => {
         setGlobalList(list)
-        router.replace(`/(tabs)/list/${list.uuid}/view`);
+        router.navigate(`/(tabs)/list/${list.uuid}/view`);
     };
 
     return (

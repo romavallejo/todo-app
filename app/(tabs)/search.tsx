@@ -3,7 +3,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getPublicLists } from "@/services/lists/getPublicLists";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
   ScrollView,
   Text,
@@ -22,22 +23,33 @@ export default function Search() {
   const [userListsError, setUserListsError] = useState(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-
-    const load = async () => {
-      setLoading(true);
-      try {
-        const listsResult = await getPublicLists();
-        setUserLists(listsResult);
-      } catch (error) {
-        setUserListsError("Error while retrieving lists.");
-      }
-      setLoading(false);
-    };
-
-    load();
-
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const listsResult = await getPublicLists();
+      setUserLists(listsResult);
+    } catch (error) {
+      setUserListsError("Error while retrieving lists.");
+    }
+    setLoading(false);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const run = async () => {
+        await load();
+        if (cancelled) return;
+      };
+
+      run();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [load])
+  );
 
   const filteredLists = useMemo(() => {
     if (!userLists) return null;
@@ -67,8 +79,8 @@ export default function Search() {
         />
       </View>
 
-      {/* Lists of todos */}
-      <View className="mt-6">
+      {/* Lists of lists */}
+      <View className="flex-col gap-1 mt-6">
         <Text style={{ color: textColor }} className="mb-2 tracking-widest uppercase">
           Lists
         </Text>

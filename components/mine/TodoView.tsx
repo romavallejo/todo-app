@@ -1,11 +1,9 @@
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { updateTodo } from '@/services/todos/updateTodo';
-import { UpdateTodoDto } from "@/types/UpdateTodoDto";
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import { Text, View } from "react-native";
 import Category from "./Category";
+import PriorityTag from "./PriorityTag";
 
 type CategoryType = {
     id: string;
@@ -48,40 +46,6 @@ const TodoView = ({ todo }: TodoProps) => {
 
     const router = useRouter();
 
-    const [completed, setCompleted] = useState(todo.completed);
-    const [updating, setUpdating] = useState(false);
-
-    const toggleCompleted = async () => {
-        if (updating) return;
-        const next = !completed;
-        setCompleted(next); // optimistic
-
-        const dto: UpdateTodoDto = {
-            uuid: todo.uuid,
-            title: todo.title,
-            description: todo.description,
-            completed: next,
-            completedAt: next ? new Date() : (null as unknown as Date),
-            dueDate: new Date(todo.dueDate),
-            listUuid: todo.listUuid,
-            priority: todo.priority,
-            ownerId: todo.ownerId,
-        };
-
-        try {
-            setUpdating(true);
-            await updateTodo(dto);
-        } catch (err) {
-            setCompleted(!next); // rollback
-            console.error("Failed to update todo", err);
-        } finally {
-            setUpdating(false);
-        }
-    };
-
-    const goToEdit = () => {
-       router.replace("/(tabs)/search");
-    };
 
     return (
         <View
@@ -91,28 +55,35 @@ const TodoView = ({ todo }: TodoProps) => {
 
             {/* Info */}
             <View className="flex-1">
-                <Text
-                    className="text-lg font-bold"
-                    style={{
-                        color: textColor,
-                        textDecorationLine: completed ? "line-through" : "none",
-                        opacity: completed ? 0.6 : 1,
-                    }}
-                    numberOfLines={1}
-                >
-                    {todo.title}
-                </Text>
+                <View className='flex-row items-center'>
+                    <Text
+                        className="text-lg font-bold flex-1"
+                        style={{
+                            color: textColor,
+                        }}
+                        numberOfLines={1}
+                    >
+                        {todo.title}
+                    </Text>
+                    <PriorityTag priority={todo.priority}/>
+                </View>
+
+                <View>
+                    <Text style={{ color: textColor }}>{todo.description}</Text>
+                </View>
 
                 <View className="flex-row items-center flex-wrap gap-1 mt-1">
+
                     {todo.categories?.map((c) => (
                         <Category key={c.id} name={c.name} color={c.color} />
                     ))}
+                    
                     {todo.dueDate ? (
                         <Text
                             style={{ color: textColor }}
                             className="italic ml-1"
                         >
-                            {formatDueDate(todo.dueDate)}
+                            Due: {formatDueDate(todo.dueDate)}
                         </Text>
                     ) : null}
                 </View>
