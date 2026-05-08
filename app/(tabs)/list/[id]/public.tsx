@@ -8,6 +8,7 @@ import { createComment } from "@/services/comments/createComment";
 import { getCommentsByListId } from "@/services/comments/getCommentsByListId";
 import { copyList } from "@/services/lists/copyList";
 import { getTodoByListId } from "@/services/todos/getTodoByListId";
+import { getUserName } from "@/services/user/getUserName";
 import { CreateCommentDto } from "@/types/CreateCommentDto";
 import { useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
@@ -29,6 +30,7 @@ const ViewPublicList = () => {
     const [copyError, setCopyError] = useState(null);
     const [comments, setComments] = useState(null);
     const [commentsError, setCommentsError] = useState(null);
+    const [ownerName, setsOwnerName] = useState("");
 
     const [newComment, setNewComment] = useState("");
     const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -99,9 +101,19 @@ const ViewPublicList = () => {
           }
         };
 
+        const loadUserName = async () => {
+            try {
+            const name = await getUserName(globalList.owner_id);
+            setsOwnerName(name);
+          } catch (error) {
+            
+          }
+        };
+
         setLoading(true);
         loadTodos();
         loadComments();
+        loadUserName();
         setLoading(false);
     
       }, [globalList]);
@@ -151,7 +163,6 @@ const ViewPublicList = () => {
                         style={{
                             color: textColor,
                         }}
-                        numberOfLines={1}
                     >
                         {globalList.title}
                     </Text>
@@ -162,7 +173,7 @@ const ViewPublicList = () => {
                         }}
                         numberOfLines={1}
                     >
-                        user name
+                       {ownerName}
                     </Text>
                 </View>
 

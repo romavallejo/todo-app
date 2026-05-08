@@ -1,15 +1,16 @@
 import { Colors } from "@/constants/theme";
 import { DataContext } from "@/contexts/DataContext";
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { getUserName } from "@/services/user/getUserName";
 import { useRouter } from "expo-router";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 type ListType = {
     uuid: string;
     title: string;
     description: string;
-    ownerId: string;
+    owner_id: string;
     visibility: boolean;
     comments: null;
 };
@@ -26,6 +27,23 @@ const ListCardView = ({ list }: ListProps) => {
 
     const router = useRouter();
     const {setGlobalList} = useContext(DataContext);
+
+    const [userName, setUserName] = useState("");
+
+    useEffect(() => {
+    
+        const loadTodos = async () => {
+            try {
+            const name = await getUserName(list.owner_id);
+            setUserName(name);
+            } catch (error) {
+            
+            }
+        };
+
+        loadTodos();
+
+    }, []);
 
     return (
         <Pressable onPress={() => {
@@ -54,7 +72,7 @@ const ListCardView = ({ list }: ListProps) => {
                         }}
                         numberOfLines={1}
                     >
-                        user name
+                        {userName}
                     </Text>
                 </View>
 
