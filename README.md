@@ -1,50 +1,142 @@
-# Welcome to your Expo app 👋
+# Todo App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 🧪 Credenciales de prueba
 
-## Get started
+Para explorar la aplicación sin necesidad de crear una cuenta, puedes usar las siguientes credenciales de prueba:
 
-1. Install dependencies
+| Campo | Valor |
+|---|---|
+| **Email** | `user@gmail.com` |
+| **Contraseña** | `123456` |
 
-   ```bash
-   npm install
-   ```
+> ⚠️ Esta cuenta es solo para propósitos de demostración. No almacenes información sensible con ella.
 
-2. Start the app
+## 📖 Descripción
 
-   ```bash
-   npx expo start
-   ```
+Es una aplicación móvil de gestión de tareas de cualquier ambito. Permite crear listas de tareas personalizadas, organizarlas por prioridad y categoría, hacer seguimiento del progreso, y explorar listas públicas compartidas por otros usuarios.
 
-In the output, you'll find options to open the app in a
+El proyecto fue construido como una aplicación full-stack con un backend en **Quarkus** y un frontend en **React Native con Expo**, siguiendo principios de arquitectura Clean en el servidor.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### ✨ Funcionalidades principales
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- 🔐 Autenticación con Firebase (login y registro)
+- ✅ Creación y gestión de todos con prioridad, fecha límite y categorías
+- 📋 Listas de todos con control de visibilidad pública/privada
+- 📊 Seguimiento de progreso por lista
+- 🌐 Explorador de listas públicas con búsqueda
+- 💬 Comentarios en listas públicas
+- 📋 Copiar listas públicas a tu cuenta
+- 🌙 Soporte de tema oscuro y claro
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 🛠️ Tecnologías
 
-```bash
-npm run reset-project
+### Frontend
+| Tecnología | Versión | Uso |
+|---|---|---|
+| [React Native](https://reactnative.dev/) | 0.76+ | Framework base |
+| [Expo](https://expo.dev/) | SDK 52 | Toolchain y build |
+| [Expo Router](https://expo.github.io/router/) | v4 | Navegación basada en archivos |
+| [NativeWind](https://www.nativewind.dev/) | v4 | Clases Tailwind en RN |
+| [Firebase](https://firebase.google.com/) | v11 | Autenticación |
+| TypeScript | 5+ | Tipado estático |
+
+### Backend
+| Tecnología | Uso |
+|---|---|
+| [Quarkus](https://quarkus.io/) | Framework Java para el API REST |
+| Panache + Hibernate | ORM y acceso a datos |
+| MySQL | Base de datos relacional |
+| Firebase Admin SDK | Verificación de tokens JWT |
+
+---
+
+## ⚙️ Variables de entorno
+
+El archivo `.env` en la raíz del proyecto se debería ver algo así.
+
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=...
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=.
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+EXPO_PUBLIC_FIREBASE_APP_ID=...
+EXPO_PUBLIC_BACKEND_URL=https:...
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 🚀 Instalación
 
-To learn more about developing your project with Expo, look at the following resources:
+### Prerequisitos
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Node.js** >= 18
+- **Yarn** >= 1.22
+- El backend de Quarkus corriendo localmente o en un servidor accesible
 
-## Join the community
+### 1. Clonar el repositorio
 
-Join our community of developers creating universal apps.
+```bash
+git clone https://github.com/romavallejo/todo-app
+cd todo-app
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 2. Instalar dependencias
+
+```bash
+yarn install
+```
+
+### 3. Configurar variables de entorno
+
+```bash
+cp .env.example .env
+```
+
+Edita el archivo `.env` con tus valores reales.
+
+---
+
+## ▶️ Cómo ejecutar
+
+### Web (recomendado para desarrollo rápido)
+
+```bash
+yarn expo start --web
+```
+
+Abre [http://localhost:8081](http://localhost:8081) en tu navegador.
+
+### iOS (requiere macOS + Xcode)
+
+```bash
+yarn expo start --ios
+```
+
+### Android (requiere Android Studio o dispositivo físico)
+
+```bash
+yarn expo start --android
+```
+
+### Expo Go (cualquier dispositivo físico)
+
+```bash
+yarn expo start
+```
+
+Escanea el código QR con la app **Expo Go** en tu teléfono.
+
+---
+
+## 🔗 Backend
+
+Este frontend consume el API REST del proyecto backend correspondiente construido con Quarkus. 
+
+---
+
+## 📄 Licencia
+
+Este proyecto fue desarrollado con fines académicos.
