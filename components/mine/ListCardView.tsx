@@ -1,4 +1,4 @@
-import { Colors } from "@/constants/theme";
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { DataContext } from "@/contexts/DataContext";
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getUserName } from "@/services/user/getUserName";
@@ -21,68 +21,129 @@ type ListProps = {
 
 const ListCardView = ({ list }: ListProps) => {
     const colorScheme = useColorScheme();
-    const textColor = Colors[colorScheme ?? 'light'].text;
-    const bg = Colors[colorScheme ?? 'light'].background;
-    const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
+    const C = Colors[colorScheme ?? 'light'];
 
     const router = useRouter();
-    const {setGlobalList} = useContext(DataContext);
+    const { setGlobalList } = useContext(DataContext);
 
     const [userName, setUserName] = useState("");
 
     useEffect(() => {
-    
-        const loadTodos = async () => {
-            try {
-            const name = await getUserName(list.owner_id);
-            setUserName(name);
-            } catch (error) {
-            
-            }
-        };
+        getUserName(list.owner_id)
+            .then(setUserName)
+            .catch(() => {});
+    }, [list.owner_id]);
 
-        loadTodos();
-
-    }, []);
+    const handlePress = () => {
+        setGlobalList(list);
+        router.navigate(`/list/${list.uuid}/public`);
+    };
 
     return (
-        <Pressable onPress={() => {
-                setGlobalList(list);
-                router.navigate(`/list/${list.uuid}/public`);
-            }} 
-            hitSlop={8}
+        <Pressable
+            onPress={handlePress}
+            hitSlop={4}
+            style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
         >
             <View
-                className="w-full p-3 rounded-lg border-2"
-                style={{ backgroundColor: bg , borderColor: tintAlt}}
-            >       
-                <View className="flex-row items-center">
+                style={{
+                    backgroundColor: C.surface,
+                    borderRadius: Radius.lg,
+                    padding: 16,
+                    ...Shadow.card,
+                    gap: 6,
+                }}
+            >
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 8,
+                    }}
+                >
                     <Text
-                        className="text-lg font-bold flex-1"
+                        numberOfLines={1}
                         style={{
-                            color: textColor,
+                            flex: 1,
+                            fontSize: 16,
+                            fontWeight: "700",
+                            color: C.text,
                         }}
                     >
                         {list.title}
                     </Text>
-                    <Text
-                        className="italic"
-                        style={{
-                            color: textColor,
-                        }}
-                        numberOfLines={1}
-                    >
-                        {userName}
-                    </Text>
+
+                    {userName ? (
+                        <View
+                            style={{
+                                backgroundColor: C.tintSubtle,
+                                paddingHorizontal: 8,
+                                paddingVertical: 3,
+                                borderRadius: Radius.full,
+                                flexShrink: 0,
+                            }}
+                        >
+                            <Text
+                                numberOfLines={1}
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: "600",
+                                    color: C.tint,
+                                    maxWidth: 100,
+                                }}
+                            >
+                                {userName}
+                            </Text>
+                        </View>
+                    ) : null}
                 </View>
 
-                <Text
+                {list.description ? (
+                    <Text
+                        numberOfLines={2}
+                        style={{
+                            fontSize: 13,
+                            color: C.textSecondary,
+                            lineHeight: 18,
+                        }}
+                    >
+                        {list.description}
+                    </Text>
+                ) : null}
+
+                <View
                     style={{
-                        color: textColor
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginTop: 4,
                     }}
                 >
-                    {list.description}
-                </Text>
+                    <View
+                        style={{
+                            backgroundColor: C.tintSubtle,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: Radius.full,
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontSize: 11,
+                                fontWeight: "600",
+                                color: C.tint,
+                                letterSpacing: 0.5,
+                                textTransform: "uppercase",
+                            }}
+                        >
+                            Public
+                        </Text>
+                    </View>
+
+                    <Text style={{ fontSize: 13, color: C.textSecondary }}>
+                        View →
+                    </Text>
+                </View>
             </View>
         </Pressable>
     );

@@ -1,6 +1,6 @@
-import { Colors } from "@/constants/theme";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
 import Category from "./Category";
 import PriorityTag from "./PriorityTag";
@@ -40,55 +40,106 @@ const formatDueDate = (iso: string) => {
 
 const TodoView = ({ todo }: TodoProps) => {
     const colorScheme = useColorScheme();
-    const textColor = Colors[colorScheme ?? 'light'].text;
-    const bg = Colors[colorScheme ?? 'light'].background;
-    const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
-
-    const router = useRouter();
-
+    const C = Colors[colorScheme ?? 'light'];
 
     return (
         <View
-            className="flex-row items-center gap-3 w-full p-3 rounded-lg border-2"
-            style={{ backgroundColor: bg , borderColor: tintAlt}}
+            style={{
+                backgroundColor: todo.completed ? C.greenSubtle : C.surface,
+                borderRadius: Radius.md,
+                borderLeftWidth: 4,
+                borderLeftColor: todo.completed ? C.green : C.tint,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                ...Shadow.card,
+                gap: 4,
+            }}
         >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View
+                    style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: Radius.full,
+                        backgroundColor: todo.completed ? C.green : C.border,
+                        flexShrink: 0,
+                    }}
+                />
+                <Text
+                    numberOfLines={1}
+                    style={{
+                        flex: 1,
+                        fontSize: 15,
+                        fontWeight: "600",
+                        color: C.text,
+                        textDecorationLine: todo.completed ? "line-through" : "none",
+                        opacity: todo.completed ? 0.55 : 1,
+                    }}
+                >
+                    {todo.title}
+                </Text>
+                <PriorityTag priority={todo.priority} />
+            </View>
 
-            {/* Info */}
-            <View className="flex-1">
-                <View className='flex-row items-center'>
-                    <Text
-                        className="text-lg font-bold flex-1"
-                        style={{
-                            color: textColor,
-                        }}
-                        numberOfLines={1}
-                    >
-                        {todo.title}
-                    </Text>
-                    <PriorityTag priority={todo.priority}/>
-                </View>
+            {todo.description ? (
+                <Text
+                    style={{
+                        fontSize: 13,
+                        color: C.textSecondary,
+                        lineHeight: 18,
+                        paddingLeft: 14,
+                        opacity: todo.completed ? 0.6 : 1,
+                    }}
+                    numberOfLines={2}
+                >
+                    {todo.description}
+                </Text>
+            ) : null}
 
-                <View>
-                    <Text style={{ color: textColor }}>{todo.description}</Text>
-                </View>
-
-                <View className="flex-row items-center flex-wrap gap-1 mt-1">
-
+            {(todo.categories?.length > 0 || todo.dueDate) && (
+                <View
+                    style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        gap: 4,
+                        marginTop: 2,
+                        paddingLeft: 14,
+                    }}
+                >
                     {todo.categories?.map((c) => (
                         <Category key={c.id} name={c.name} color={c.color} />
                     ))}
-                    
-                    {todo.dueDate ? (
-                        <Text
-                            style={{ color: textColor }}
-                            className="italic ml-1"
+                    {todo.dueDate && (
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 3,
+                                backgroundColor: C.surfaceAlt,
+                                paddingHorizontal: 7,
+                                paddingVertical: 2,
+                                borderRadius: Radius.full,
+                            }}
                         >
-                            Due: {formatDueDate(todo.dueDate)}
-                        </Text>
-                    ) : null}
+                            <IconSymbol
+                                name="calendar"
+                                size={11}
+                                color={C.textSecondary}
+                            />
+                            <Text
+                                style={{
+                                    fontSize: 11,
+                                    color: C.textSecondary,
+                                    fontWeight: "500",
+                                }}
+                            >
+                                {formatDueDate(todo.dueDate)}
+                            </Text>
+                        </View>
+                    )}
                 </View>
-            </View>
-
+            )}
         </View>
     );
 };

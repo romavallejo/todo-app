@@ -1,5 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from "@/constants/theme";
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { DataContext } from '@/contexts/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from "expo-router";
@@ -21,57 +21,104 @@ type ListProps = {
 
 const ListCard = ({ list }: ListProps) => {
     const colorScheme = useColorScheme();
-    const textColor = Colors[colorScheme ?? 'light'].text;
-    const bg = Colors[colorScheme ?? 'light'].background;
-    const tintAlt = Colors[colorScheme ?? 'light'].tintAlt;
+    const C = Colors[colorScheme ?? 'light'];
 
-    const {setGlobalList} = useContext(DataContext);
-
+    const { setGlobalList } = useContext(DataContext);
     const router = useRouter();
 
     const goToEdit = () => {
-        setGlobalList(list)
+        setGlobalList(list);
         router.navigate(`/(tabs)/list/${list.uuid}/edit`);
     };
 
     const goToView = () => {
-        setGlobalList(list)
+        setGlobalList(list);
         router.navigate(`/(tabs)/list/${list.uuid}/view`);
     };
 
     return (
-        <Pressable onPress={goToView} hitSlop={8}>
+        <Pressable
+            onPress={goToView}
+            hitSlop={4}
+            style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+        >
             <View
-                className="flex-row items-center gap-3 w-full p-3 rounded-lg border-2"
-                style={{ backgroundColor: bg , borderColor: tintAlt}}
+                style={{
+                    backgroundColor: C.surface,
+                    borderRadius: Radius.lg,
+                    borderLeftWidth: 4,
+                    borderLeftColor: C.tint,
+                    paddingVertical: 14,
+                    paddingRight: 14,
+                    paddingLeft: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    ...Shadow.card,
+                }}
             >
-
-                {/* Info */}
-                <View className="flex-1">
+                <View style={{ flex: 1, gap: 3 }}>
                     <Text
-                        className="text-lg font-bold"
-                        style={{
-                            color: textColor,
-                            opacity: 1,
-                        }}
                         numberOfLines={1}
+                        style={{
+                            fontSize: 16,
+                            fontWeight: "700",
+                            color: C.text,
+                        }}
                     >
                         {list.title}
                     </Text>
 
-                    <Text
+                    {list.description ? (
+                        <Text
+                            numberOfLines={2}
+                            style={{
+                                fontSize: 13,
+                                color: C.textSecondary,
+                                lineHeight: 18,
+                            }}
+                        >
+                            {list.description}
+                        </Text>
+                    ) : null}
+
+                    <View
                         style={{
-                            color: textColor,
-                            opacity: 1,
+                            alignSelf: "flex-start",
+                            marginTop: 6,
+                            backgroundColor: list.visibility ? C.tintSubtle : C.surfaceAlt,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: Radius.full,
                         }}
                     >
-                        {list.description}
-                    </Text>
+                        <Text
+                            style={{
+                                fontSize: 11,
+                                fontWeight: "600",
+                                color: list.visibility ? C.tint : C.textSecondary,
+                                letterSpacing: 0.5,
+                                textTransform: "uppercase",
+                            }}
+                        >
+                            {list.visibility ? "Public" : "Private"}
+                        </Text>
+                    </View>
                 </View>
 
-                {/* Edit button */}
-                <Pressable onPress={goToEdit} hitSlop={8}>
-                    <IconSymbol name="pencil" size={22} color={textColor} />
+                <Pressable
+                    onPress={goToEdit}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                        width: 34,
+                        height: 34,
+                        borderRadius: Radius.full,
+                        backgroundColor: pressed ? C.surfaceAlt : C.tintSubtle,
+                        alignItems: "center",
+                        justifyContent: "center",
+                    })}
+                >
+                    <IconSymbol name="pencil" size={16} color={C.tint} />
                 </Pressable>
             </View>
         </Pressable>

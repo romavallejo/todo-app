@@ -1,5 +1,5 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { DataContext } from "@/contexts/DataContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { associateCategoryTodo } from "@/services/categories/associateCategoryTodo";
@@ -12,9 +12,11 @@ import { updateTodo } from "@/services/todos/updateTodo";
 import { CategoryType } from "@/types/CategoryType";
 import { TodoType } from "@/types/TodoType";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -22,25 +24,211 @@ import {
   Switch,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
 
+const PRIORITY_CONFIG: Record<Priority, { bg: string; text: string; dot: string; label: string }> = {
+  LOW:    { bg: "#DCFCE7", text: "#166534", dot: "#16A34A", label: "Low" },
+  MEDIUM: { bg: "#FEF9C3", text: "#854D0E", dot: "#CA8A04", label: "Medium" },
+  HIGH:   { bg: "#FEE2E2", text: "#991B1B", dot: "#DC2626", label: "High" },
+};
+
+const FieldLabel = ({
+  label,
+  optional,
+  error,
+}: {
+  label: string;
+  optional?: boolean;
+  error?: string | null;
+}) => {
+  const colorScheme = useColorScheme();
+  const C = Colors[colorScheme ?? "light"];
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 6,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 13,
+          fontWeight: "600",
+          color: C.textSecondary,
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+        {optional && <Text style={{ fontWeight: "400" }}> (optional)</Text>}
+      </Text>
+      {error && <Text style={{ fontSize: 12, color: C.red }}>{error}</Text>}
+    </View>
+  );
+};
+
+const PickerModal = ({
+  visible,
+  title,
+  onClose,
+  children,
+}: {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) => {
+  const colorScheme = useColorScheme();
+  const C = Colors[colorScheme ?? "light"];
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}
+      >
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: C.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: 24,
+            paddingBottom: Platform.OS === "ios" ? 40 : 28,
+            maxHeight: "75%",
+            ...Shadow.modal,
+          }}
+        >
+          <View
+            style={{
+              width: 40, height: 4, borderRadius: Radius.full,
+              backgroundColor: C.border, alignSelf: "center", marginBottom: 20,
+            }}
+          />
+          <Text style={{ fontSize: 18, fontWeight: "700", color: C.text, marginBottom: 16 }}>
+            {title}
+          </Text>
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const ConfirmModal = ({
+  visible,
+  onConfirm,
+  onCancel,
+  deleting,
+}: {
+  visible: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}) => {
+  const colorScheme = useColorScheme();
+  const C = Colors[colorScheme ?? "light"];
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Pressable
+        onPress={onCancel}
+        style={{
+          flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
+          justifyContent: "center", alignItems: "center", paddingHorizontal: 28,
+        }}
+      >
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: C.surface, borderRadius: Radius.lg,
+            padding: 24, width: "100%", ...Shadow.modal,
+          }}
+        >
+          <View
+            style={{
+              width: 52, height: 52, borderRadius: Radius.full,
+              backgroundColor: C.redSubtle, alignItems: "center",
+              justifyContent: "center", alignSelf: "center", marginBottom: 16,
+            }}
+          >
+            <Text style={{ fontSize: 24 }}>🗑️</Text>
+          </View>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: C.text, textAlign: "center", marginBottom: 8 }}>
+            Delete Todo?
+          </Text>
+          <Text style={{ fontSize: 14, color: C.textSecondary, textAlign: "center", lineHeight: 20, marginBottom: 24 }}>
+            This todo will be permanently deleted and cannot be recovered.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <TouchableOpacity
+              onPress={onCancel}
+              disabled={deleting}
+              style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.md, alignItems: "center", backgroundColor: C.surfaceAlt }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ color: C.textSecondary, fontWeight: "600", fontSize: 15 }}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onConfirm}
+              disabled={deleting}
+              style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.md, alignItems: "center", backgroundColor: C.red, opacity: deleting ? 0.7 : 1, ...Shadow.card }}
+              activeOpacity={0.85}
+            >
+              {deleting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Delete</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const CategoryChip = ({
+  cat,
+  onRemove,
+}: {
+  cat: CategoryType;
+  onRemove: (cat: CategoryType) => void;
+}) => (
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: cat.color,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.full,
+    }}
+  >
+    <Text style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}>
+      {cat.name}
+    </Text>
+    <Pressable onPress={() => onRemove(cat)} hitSlop={8}>
+      <Text style={{ color: "rgba(255,255,255,0.85)", fontWeight: "700", fontSize: 14, lineHeight: 16 }}>
+        ×
+      </Text>
+    </Pressable>
+  </View>
+);
+
+const COLOR_PRESETS = ["#3B82F6", "#8B5CF6", "#EC4899", "#EF4444", "#F97316", "#EAB308", "#22C55E", "#14B8A6",];
+
 const EditTodoScreen = () => {
   const colorScheme = useColorScheme();
-  const textColor = Colors[colorScheme ?? "light"].text;
-  const tint = Colors[colorScheme ?? "light"].tint;
-  const tintAlt = Colors[colorScheme ?? "light"].tintAlt;
-  const backgroundColor = Colors[colorScheme ?? "light"].background;
-  const red = Colors[colorScheme ?? "light"].red;
+  const C = Colors[colorScheme ?? "light"];
 
   const { globalTodo, setGlobalTodo } = useContext(DataContext);
-
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
 
-  // form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -49,21 +237,22 @@ const EditTodoScreen = () => {
   const [todoCategories, setTodoCategories] = useState<CategoryType[]>([]);
   const [listUuid, setListUuid] = useState<string | null>(null);
 
-  // ui state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [allCategories, setAllCategories] = useState<CategoryType[]>([]);
-  const [allLists, setAllLists] = useState<
-    { string; id?: string; title: string }[]
-  >([]);
+  const [allLists, setAllLists] = useState<{ id?: string; title: string }[]>([]);
   const [showListPicker, setShowListPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryColor, setNewCategoryColor] = useState("#3b82f6");
+  const [newCategoryColor, setNewCategoryColor] = useState(COLOR_PRESETS[0]);
   const [saving, setSaving] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
-  // hydrate from globalTodo
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!globalTodo) return;
     setTitle(globalTodo.title);
@@ -75,65 +264,42 @@ const EditTodoScreen = () => {
     setListUuid(globalTodo.listUuid ?? null);
   }, [globalTodo]);
 
-  // load all user categories for the picker
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await getCategoriesByUser();
-        setAllCategories(data);
-      } catch (e) {
-        console.error("Failed to load categories", e);
-      }
-    })();
+    getCategoriesByUser().then(setAllCategories).catch(() => {});
+    getUserLists().then(setAllLists).catch(() => {});
   }, [globalTodo]);
 
-  // load all user lists for the picker
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getUserLists();
-        setAllLists(data);
-      } catch (e) {
-        console.error("Failed to load lists", e);
-      }
-    })();
-  }, [globalTodo]);
-
-  const priorities: Priority[] = ["LOW", "MEDIUM", "HIGH"];
-
-  const canSave = !!listUuid && !saving;
+  const validate = (): boolean => {
+    let ok = true;
+    if (!title.trim()) { setTitleError("Title is required."); ok = false; }
+    else setTitleError(null);
+    if (!listUuid) { setListError("Please select a list."); ok = false; }
+    else setListError(null);
+    return ok;
+  };
 
   const handleSave = async () => {
-    if (!globalTodo) return;
-    if (!listUuid) {
-      setListError("Please select a list.");
-      return;
-    }
-    setListError(null);
+    if (!globalTodo || !validate()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await updateTodo({
         uuid: globalTodo.uuid,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         completed,
-        completedAt: completed
-          ? globalTodo.completedAt ?? new Date().toISOString()
-          : null,
-        dueDate: dueDate,
-        listUuid: listUuid,
+        completedAt: completed ? (globalTodo.completedAt ?? new Date().toISOString()) : null,
+        dueDate,
+        listUuid: listUuid!,
         priority,
         ownerId: globalTodo.ownerId,
       });
-
       const updated: TodoType = {
         ...globalTodo,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         completed,
-        completedAt: completed
-          ? globalTodo.completedAt ?? new Date().toISOString()
-          : null,
+        completedAt: completed ? (globalTodo.completedAt ?? new Date().toISOString()) : null,
         dueDate: dueDate.toISOString(),
         listUuid: listUuid as TodoType["listUuid"],
         priority,
@@ -141,54 +307,48 @@ const EditTodoScreen = () => {
       };
       setGlobalTodo(updated);
       router.back();
-    } catch (e) {
-      console.error("Failed to save todo", e);
+    } catch {
+      setSaveError("Couldn't save changes. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!globalTodo) return;
-    setSaving(true);
+    setDeleting(true);
     try {
       await deleteTodo(globalTodo.uuid);
-    } catch(err) {
-      console.error("Failed to delete todo", err);
+      setConfirmVisible(false);
+      router.back();
+    } catch {
+      setConfirmVisible(false);
+      setSaveError("Couldn't delete the todo. Please try again.");
     } finally {
-      setSaving(false)
-      router.back()
+      setDeleting(false);
     }
   };
 
-  const handleAddCategoryToTodo = async (category: CategoryType) => {
+  const handleAddCategory = async (category: CategoryType) => {
     if (!globalTodo) return;
     if (todoCategories.some((c) => c.id === category.id)) {
       setShowCategoryPicker(false);
       return;
     }
     try {
-      await associateCategoryTodo({
-        categoryId: category.id,
-        todoId: globalTodo.uuid,
-      });
+      await associateCategoryTodo({ categoryId: category.id, todoId: globalTodo.uuid });
       setTodoCategories([...todoCategories, category]);
       setShowCategoryPicker(false);
-    } catch (e) {
-      console.error("Failed to associate category", e);
+    } catch {
     }
   };
 
-  const handleRemoveCategoryFromTodo = async (category: CategoryType) => {
+  const handleRemoveCategory = async (category: CategoryType) => {
     try {
       await deleteCategory(category.id);
-      setTodoCategories(
-        todoCategories.filter((c) => c.id !== category.id)
-      );
+      setTodoCategories(todoCategories.filter((c) => c.id !== category.id));
       setAllCategories(allCategories.filter((c) => c.id !== category.id));
-    } catch (e) {
-      console.error("Failed to delete category", e);
-    }
+    } catch {}
   };
 
   const handleCreateCategory = async () => {
@@ -199,381 +359,401 @@ const EditTodoScreen = () => {
         color: newCategoryColor,
       });
       setAllCategories([newCat, ...allCategories]);
-    } catch (e) {
-      console.error("Failed to create category", e);
-    } finally {
+      setNewCategoryName("");
+      setNewCategoryColor(COLOR_PRESETS[0]);
       setShowCreateCategory(false);
-    }
+    } catch {}
   };
 
   if (!globalTodo) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <Text style={{ color: textColor }}>No todo selected</Text>
+      <View style={{ flex: 1, backgroundColor: C.background, justifyContent: "center", alignItems: "center", gap: 8 }}>
+        <Text style={{ fontSize: 32 }}>🤔</Text>
+        <Text style={{ color: C.textSecondary, fontSize: 15 }}>No todo selected</Text>
       </View>
     );
   }
 
+  const selectedList = allLists.find((l) => l.id === listUuid);
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
   return (
-    <ScrollView
-      className="flex-col px-6 pt-6"
-      contentContainerStyle={{ paddingBottom: 120 }}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: C.background }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* Back button */}
-      <View
-        className="flex w-[24px] h-[24px] justify-center items-center border rounded-[12px] mb-6"
-        style={{ borderColor: tintAlt }}
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 52, paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <IconSymbol name="chevron.left" size={24} color={textColor} />
-        </Pressable>
-      </View>
-
-      <Text style={{ color: textColor }} className="mb-2 tracking-widest uppercase">
-        Edit todo
-      </Text>
-
-      {/* Title */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        Title
-      </Text>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Title"
-        placeholderTextColor={tintAlt}
-        className="border rounded-lg px-3 py-2 mb-4"
-        style={{ borderColor: tintAlt, color: textColor }}
-      />
-
-      {/* Description */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        Description
-      </Text>
-      <TextInput
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Description"
-        placeholderTextColor={tintAlt}
-        multiline
-        numberOfLines={4}
-        className="border rounded-lg px-3 py-2 mb-4"
-        style={{
-          borderColor: tintAlt,
-          color: textColor,
-          minHeight: 96,
-          textAlignVertical: "top",
-        }}
-      />
-
-      {/* Completed */}
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="font-semibold" style={{ color: textColor }}>
-          Completed
-        </Text>
-        <Switch value={completed} onValueChange={setCompleted} />
-      </View>
-
-      {/* Due date */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        Due date
-      </Text>
-      <Pressable
-        onPress={() => setShowDatePicker(true)}
-        className="border rounded-lg px-3 py-3 mb-4"
-        style={{ borderColor: tintAlt }}
-      >
-        <Text style={{ color: textColor }}>{dueDate.toLocaleString()}</Text>
-      </Pressable>
-      {showDatePicker && (
-        <DateTimePicker
-          value={dueDate}
-          mode="datetime"
-          onChange={(_, selected) => {
-            if (Platform.OS === "android") setShowDatePicker(false);
-            if (selected) setDueDate(selected);
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 28,
           }}
-        />
-      )}
-
-      {/* Priority */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        Priority
-      </Text>
-      <View className="flex-row gap-2 mb-4">
-        {priorities.map((p) => {
-          const selected = priority === p;
-          return (
-            <Pressable
-              key={p}
-              onPress={() => setPriority(p)}
-              className="flex-1 border rounded-lg py-2 items-center"
-              style={{
-                borderColor: tintAlt,
-                backgroundColor: selected ? tintAlt : "transparent",
-              }}
-            >
-              <Text
-                style={{ color: selected ? tint : textColor }}
-                className="font-semibold"
-              >
-                {p}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* List */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        List <Text style={{ color: red }}>*</Text>
-      </Text>
-      <View className="flex-row gap-2 mb-2">
-        <Pressable
-          onPress={() => setShowListPicker(true)}
-          className="flex-1 border rounded-lg px-3 py-3"
-          style={{ borderColor: listError ? red : tintAlt }}
-        >
-          <Text style={{ color: textColor }}>
-            {listUuid
-              ? allLists.find((l) => (l.id) === listUuid)?.title ??
-                "Selected list"
-              : "Select a list"}
-          </Text>
-        </Pressable>
-      </View>
-      {listError ? (
-        <Text className="mb-4" style={{ color: red }}>
-          {listError}
-        </Text>
-      ) : (
-        <View className="mb-4" />
-      )}
-
-      {/* Categories */}
-      <Text className="mb-2 font-semibold" style={{ color: textColor }}>
-        Categories
-      </Text>
-      <View className="flex-row flex-wrap gap-2 mb-2">
-        {todoCategories.map((cat) => (
-          <View
-            key={cat.id}
-            className="flex-row items-center px-3 py-1 rounded-full"
-            style={{ backgroundColor: cat.color ?? tintAlt }}
-          >
-            <Text style={{ color: "#fff" }} className="mr-2">
-              {cat.name}
-            </Text>
-            <Pressable
-              onPress={() => handleRemoveCategoryFromTodo(cat)}
-              hitSlop={8}
-            >
-              <Text style={{ color: "#fff", fontWeight: "bold" }}>×</Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
-      <View className="flex-row gap-2 mb-6">
-        <Pressable
-          onPress={() => setShowCategoryPicker(true)}
-          className="border rounded-lg px-3 py-2"
-          style={{ borderColor: tintAlt }}
-        >
-          <Text style={{ color: textColor }}>+ Add category</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setShowCreateCategory(true)}
-          className="border rounded-lg px-3 py-2"
-          style={{ borderColor: tintAlt }}
-        >
-          <Text style={{ color: textColor }}>New category</Text>
-        </Pressable>
-      </View>
-
-      {/* Save */}
-      <Pressable
-        onPress={handleSave}
-        disabled={!canSave}
-        className="rounded-lg py-3 items-center mb-3"
-        style={{ backgroundColor: tintAlt, opacity: canSave ? 1 : 0.6 }}
-      >
-        <Text style={{ color: tint }} className="font-semibold">
-          {saving ? "Saving..." : "Save"}
-        </Text>
-      </Pressable>
-
-      {/* Delete */}
-      <Pressable
-        onPress={handleDelete}
-        disabled={saving}
-        className="rounded-lg py-3 items-center"
-        style={{ backgroundColor: red, opacity: saving ? 0.6 : 1 }}
-      >
-        <Text style={{ color: backgroundColor }} className="font-semibold">
-          {saving ? "Deleting..." : "Delete"}
-        </Text>
-      </Pressable>
-
-      {/* Category picker modal */}
-      <Modal
-        visible={showCategoryPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCategoryPicker(false)}
-      >
-        <Pressable
-          onPress={() => setShowCategoryPicker(false)}
-          className="flex-1 justify-center items-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
           <Pressable
-            className="w-4/5 rounded-lg p-4"
-            style={{ backgroundColor }}
-            onPress={(e) => e.stopPropagation()}
+            onPress={() => router.back()}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 36, height: 36, borderRadius: Radius.full,
+              backgroundColor: pressed ? C.surfaceAlt : C.surface,
+              borderWidth: 1, borderColor: C.border,
+              alignItems: "center", justifyContent: "center", ...Shadow.card,
+            })}
           >
-            <Text
-              className="font-semibold mb-3"
-              style={{ color: textColor, fontSize: 16 }}
-            >
-              Select a category
-            </Text>
-            {allCategories.length === 0 && (
-              <Text style={{ color: tintAlt }}>No categories yet</Text>
+            <IconSymbol name="chevron.left" size={18} color={C.text} />
+          </Pressable>
+
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.textSecondary, letterSpacing: 1.5, textTransform: "uppercase" }}>
+            Edit Todo
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={saving}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.md, backgroundColor: C.tint, opacity: saving ? 0.65 : 1, ...Shadow.card }}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Save</Text>
             )}
-            {allCategories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() => handleAddCategoryToTodo(cat)}
-                className="flex-row items-center py-2"
-              >
-                <View
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 7,
-                    backgroundColor: cat.color ?? tintAlt,
-                    marginRight: 10,
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ backgroundColor: C.surface, borderRadius: Radius.lg, padding: 20, ...Shadow.card, gap: 20 }}>
+
+          <View>
+            <FieldLabel label="Title" error={titleError} />
+            <TextInput
+              value={title}
+              onChangeText={(v) => { setTitle(v); if (titleError) setTitleError(null); }}
+              placeholder="What needs to be done?"
+              placeholderTextColor={C.textSecondary}
+              style={{
+                backgroundColor: C.surfaceAlt, borderRadius: Radius.md,
+                paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.text,
+                borderWidth: titleError ? 1.5 : 0, borderColor: titleError ? C.red : "transparent",
+              }}
+            />
+          </View>
+
+          <View>
+            <FieldLabel label="Description" optional />
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Add more details…"
+              placeholderTextColor={C.textSecondary}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={{
+                backgroundColor: C.surfaceAlt, borderRadius: Radius.md,
+                paddingHorizontal: 14, paddingVertical: 13, fontSize: 15,
+                color: C.text, minHeight: 96,
+              }}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: C.text }}>Completed</Text>
+              <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>
+                {completed ? "This todo is done." : "Still in progress."}
+              </Text>
+            </View>
+            <Switch
+              value={completed}
+              onValueChange={setCompleted}
+              trackColor={{ false: C.border, true: C.tintSubtle }}
+              thumbColor={completed ? C.green : C.textSecondary}
+            />
+          </View>
+
+          <View>
+            <FieldLabel label="Due Date" />
+            <Pressable
+              onPress={() => setShowDatePicker(true)}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? C.border : C.surfaceAlt,
+                borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 13,
+                flexDirection: "row", alignItems: "center", gap: 8,
+              })}
+            >
+              <IconSymbol name="calendar" size={16} color={C.tint} />
+              <Text style={{ fontSize: 15, color: C.text }}>{formatDate(dueDate)}</Text>
+            </Pressable>
+            {showDatePicker && (
+              <View style={{ marginTop: 8 }}>
+                <DateTimePicker
+                  value={dueDate}
+                  mode="datetime"
+                  onChange={(_, selected) => {
+                    if (Platform.OS === "android") setShowDatePicker(false);
+                    if (selected) setDueDate(selected);
                   }}
                 />
-                <Text style={{ color: textColor }}>{cat.name}</Text>
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
+              </View>
+            )}
+          </View>
 
-      {/* Create category modal */}
-      <Modal
-        visible={showCreateCategory}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCreateCategory(false)}
-      >
-        <Pressable
-          onPress={() => setShowCreateCategory(false)}
-          className="flex-1 justify-center items-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <Pressable
-            className="w-4/5 rounded-lg p-4"
-            style={{ backgroundColor }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text
-              className="font-semibold mb-3"
-              style={{ color: textColor, fontSize: 16 }}
+          <View>
+            <FieldLabel label="Priority" />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {(["LOW", "MEDIUM", "HIGH"] as Priority[]).map((p) => {
+                const cfg = PRIORITY_CONFIG[p];
+                const selected = priority === p;
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => setPriority(p)}
+                    style={{
+                      flex: 1, paddingVertical: 10, borderRadius: Radius.md,
+                      alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 5,
+                      backgroundColor: selected ? cfg.bg : C.surfaceAlt,
+                      borderWidth: selected ? 1.5 : 0, borderColor: selected ? cfg.dot : "transparent",
+                    }}
+                  >
+                    <View style={{ width: 7, height: 7, borderRadius: Radius.full, backgroundColor: cfg.dot, opacity: selected ? 1 : 0.4 }} />
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: selected ? cfg.text : C.textSecondary }}>
+                      {cfg.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View>
+            <FieldLabel label="List" error={listError} />
+            <Pressable
+              onPress={() => setShowListPicker(true)}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? C.border : C.surfaceAlt,
+                borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 13,
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                borderWidth: listError ? 1.5 : 0, borderColor: listError ? C.red : "transparent",
+              })}
             >
-              New category
-            </Text>
-            <TextInput
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="Name"
-              placeholderTextColor={tintAlt}
-              className="border rounded-lg px-3 py-2 mb-3"
-              style={{ borderColor: tintAlt, color: textColor }}
-            />
-            <TextInput
-              value={newCategoryColor}
-              onChangeText={setNewCategoryColor}
-              placeholder="#3b82f6"
-              placeholderTextColor={tintAlt}
-              autoCapitalize="none"
-              className="border rounded-lg px-3 py-2 mb-3"
-              style={{ borderColor: tintAlt, color: textColor }}
-            />
-            <View className="flex-row gap-2">
+              <Text style={{ fontSize: 15, color: selectedList ? C.text : C.textSecondary, flex: 1 }}>
+                {selectedList ? selectedList.title : "Select a list"}
+              </Text>
+              <IconSymbol name="chevron.right" size={14} color={C.textSecondary} />
+            </Pressable>
+          </View>
+
+          <View>
+            <FieldLabel label="Categories" optional />
+            {todoCategories.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {todoCategories.map((cat) => (
+                  <CategoryChip key={cat.id} cat={cat} onRemove={handleRemoveCategory} />
+                ))}
+              </View>
+            )}
+            <View style={{ flexDirection: "row", gap: 8 }}>
               <Pressable
-                onPress={() => setShowCreateCategory(false)}
-                className="flex-1 border rounded-lg py-2 items-center"
-                style={{ borderColor: tintAlt }}
+                onPress={() => setShowCategoryPicker(true)}
+                style={({ pressed }) => ({
+                  flex: 1, paddingVertical: 10, borderRadius: Radius.md,
+                  backgroundColor: pressed ? C.border : C.surfaceAlt,
+                  alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6,
+                })}
               >
-                <Text style={{ color: textColor }}>Cancel</Text>
+                <Text style={{ fontSize: 13, color: C.tint, fontWeight: "600" }}>+ Add</Text>
               </Pressable>
               <Pressable
-                onPress={handleCreateCategory}
-                className="flex-1 rounded-lg py-2 items-center"
-                style={{ backgroundColor: tintAlt }}
+                onPress={() => setShowCreateCategory(true)}
+                style={({ pressed }) => ({
+                  flex: 1, paddingVertical: 10, borderRadius: Radius.md,
+                  backgroundColor: pressed ? C.border : C.surfaceAlt,
+                  alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6,
+                })}
               >
-                <Text style={{ color: textColor }}>Create</Text>
+                <Text style={{ fontSize: 13, color: C.textSecondary, fontWeight: "600" }}>New category</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+        </View>
 
-      {/* List picker modal */}
-      <Modal
-        visible={showListPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowListPicker(false)}
-      >
-        <Pressable
-          onPress={() => setShowListPicker(false)}
-          className="flex-1 justify-center items-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        {saveError && (
+          <View style={{ backgroundColor: C.redSubtle, borderRadius: Radius.md, padding: 14, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={{ flex: 1, color: C.red, fontSize: 14 }}>{saveError}</Text>
+            <Pressable onPress={() => setSaveError(null)} hitSlop={8}>
+              <Text style={{ color: C.red, fontSize: 18, lineHeight: 20 }}>×</Text>
+            </Pressable>
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={saving}
+          style={{ backgroundColor: C.tint, borderRadius: Radius.md, paddingVertical: 15, alignItems: "center", marginTop: 24, opacity: saving ? 0.7 : 1, ...Shadow.card }}
+          activeOpacity={0.85}
         >
-          <Pressable
-            className="w-4/5 rounded-lg p-4"
-            style={{ backgroundColor }}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text
-              className="font-semibold mb-3"
-              style={{ color: textColor, fontSize: 16 }}
-            >
-              Select a list
+          {saving ? <ActivityIndicator color="#fff" /> : (
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Changes</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ marginTop: 28, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: C.redSubtle, overflow: "hidden" }}>
+          <View style={{ backgroundColor: C.redSubtle, paddingHorizontal: 16, paddingVertical: 10 }}>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: C.red, letterSpacing: 1.2, textTransform: "uppercase" }}>
+              Danger Zone
             </Text>
-            {allLists.length === 0 && (
-              <Text style={{ color: tintAlt }}>No lists yet</Text>
-            )}
+          </View>
+          <View style={{ backgroundColor: C.surface, padding: 16 }}>
+            <Text style={{ fontSize: 14, color: C.textSecondary, lineHeight: 20, marginBottom: 14 }}>
+              Deleting this todo is permanent and cannot be undone.
+            </Text>
+            <TouchableOpacity
+              onPress={() => setConfirmVisible(true)}
+              disabled={saving || deleting}
+              style={{ backgroundColor: C.red, borderRadius: Radius.md, paddingVertical: 13, alignItems: "center", opacity: saving || deleting ? 0.6 : 1 }}
+              activeOpacity={0.85}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Delete Todo</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      <PickerModal visible={showListPicker} title="Select a List" onClose={() => setShowListPicker(false)}>
+        {allLists.length === 0 ? (
+          <View style={{ alignItems: "center", paddingVertical: 24, gap: 8 }}>
+            <Text style={{ fontSize: 24 }}>📋</Text>
+            <Text style={{ color: C.textSecondary, fontSize: 14 }}>No lists yet.</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 4 }}>
             {allLists.map((list) => {
               const lid = list.id;
               const selected = listUuid === lid;
               return (
                 <Pressable
                   key={lid}
-                  onPress={() => {
-                    setListUuid(lid ?? null);
-                    setListError(null);
-                    setShowListPicker(false);
-                  }}
-                  className="flex-row items-center justify-between py-2"
+                  onPress={() => { setListUuid(lid ?? null); setListError(null); setShowListPicker(false); }}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                    paddingVertical: 12, paddingHorizontal: 14, borderRadius: Radius.md,
+                    backgroundColor: selected ? C.tintSubtle : pressed ? C.surfaceAlt : "transparent",
+                  })}
                 >
-                  <Text style={{ color: textColor }}>{list.title}</Text>
-                  {selected && (
-                    <Text style={{ color: tintAlt, fontWeight: "bold" }}>
-                      ✓
-                    </Text>
-                  )}
+                  <Text style={{ fontSize: 15, color: selected ? C.tint : C.text, fontWeight: selected ? "600" : "400" }}>
+                    {list.title}
+                  </Text>
+                  {selected && <IconSymbol name="checkmark" size={16} color={C.tint} />}
                 </Pressable>
               );
             })}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </ScrollView>
+          </View>
+        )}
+      </PickerModal>
+
+      <PickerModal visible={showCategoryPicker} title="Add a Category" onClose={() => setShowCategoryPicker(false)}>
+        {allCategories.length === 0 ? (
+          <View style={{ alignItems: "center", paddingVertical: 24, gap: 8 }}>
+            <Text style={{ fontSize: 24 }}>🏷️</Text>
+            <Text style={{ color: C.textSecondary, fontSize: 14 }}>No categories yet. Create one first.</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 4 }}>
+            {allCategories.map((cat) => {
+              const already = todoCategories.some((c) => c.id === cat.id);
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => handleAddCategory(cat)}
+                  disabled={already}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", alignItems: "center", gap: 12,
+                    paddingVertical: 12, paddingHorizontal: 14, borderRadius: Radius.md,
+                    backgroundColor: already ? C.surfaceAlt : pressed ? C.surfaceAlt : "transparent",
+                    opacity: already ? 0.5 : 1,
+                  })}
+                >
+                  <View style={{ width: 14, height: 14, borderRadius: Radius.full, backgroundColor: cat.color }} />
+                  <Text style={{ fontSize: 15, color: C.text, flex: 1 }}>{cat.name}</Text>
+                  {already && <Text style={{ fontSize: 12, color: C.textSecondary }}>Added</Text>}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </PickerModal>
+
+      <PickerModal visible={showCreateCategory} title="New Category" onClose={() => setShowCreateCategory(false)}>
+        <TextInput
+          value={newCategoryName}
+          onChangeText={setNewCategoryName}
+          placeholder="Category name"
+          placeholderTextColor={C.textSecondary}
+          style={{
+            backgroundColor: C.surfaceAlt, borderRadius: Radius.md,
+            paddingHorizontal: 14, paddingVertical: 13, fontSize: 15,
+            color: C.text, marginBottom: 14,
+          }}
+        />
+
+        <Text style={{ fontSize: 13, fontWeight: "600", color: C.textSecondary, marginBottom: 10 }}>
+          Color
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+          {COLOR_PRESETS.map((hex) => (
+            <Pressable
+              key={hex}
+              onPress={() => setNewCategoryColor(hex)}
+              style={{
+                width: 36, height: 36, borderRadius: Radius.full,
+                backgroundColor: hex,
+                borderWidth: newCategoryColor === hex ? 3 : 0,
+                borderColor: C.text,
+              }}
+            />
+          ))}
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 }}>
+          <Text style={{ fontSize: 13, color: C.textSecondary }}>Preview:</Text>
+          <View style={{ backgroundColor: newCategoryColor, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}>
+              {newCategoryName || "Category"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => setShowCreateCategory(false)}
+            style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.md, alignItems: "center", backgroundColor: C.surfaceAlt }}
+            activeOpacity={0.75}
+          >
+            <Text style={{ color: C.textSecondary, fontWeight: "600", fontSize: 15 }}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleCreateCategory}
+            style={{ flex: 1, paddingVertical: 14, borderRadius: Radius.md, alignItems: "center", backgroundColor: C.tint, ...Shadow.card }}
+            activeOpacity={0.85}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Create</Text>
+          </TouchableOpacity>
+        </View>
+      </PickerModal>
+
+      <ConfirmModal
+        visible={confirmVisible}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmVisible(false)}
+        deleting={deleting}
+      />
+    </KeyboardAvoidingView>
   );
 };
 
